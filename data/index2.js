@@ -8,8 +8,9 @@ const baseUrl = `${location.protocol}//${location.host}`;
 /**
  * Get the status from the API
  * 
- * @returns {Promise<{internalTemp: number, externalTemp: number, desiredTemperature: number, status: string}>}
+ * @returns {Promise<{internalTemp: number, externalTemp: number, desiredTemp: number, status: string}>}
  */
+document.addEventListener('DOMContentLoaded', function() {
 function getStatus() {
   return fetch(`${baseUrl}/status`)
     .then((response) => response.json())
@@ -19,16 +20,16 @@ function getStatus() {
 /**
  * Initialize the device with the desired temperature and the sampling frequency
  * 
- * @param {number} desiredTemperature 
+ * @param {number} desiredTemp 
  * @param {number} samplingFrequency 
  * @returns {Promise<void>}
  */
-function initializeDevice(desiredTemperature, samplingFrequency) {
+function initializeDevice(desiredTemp, samplingFrequency) {
   return fetch(`${baseUrl}`, {
     method: 'POST',
     body: JSON.stringify({
       samplingFrequency,
-      desiredTemperature
+      desiredTemp
     })
   }).then((response) => response.json())
 }
@@ -47,8 +48,8 @@ function setupMainPage() {
 async function setupCurrentStatus() {
   const statusData = await getStatus();
   const { internalTemp } = statusData;
-  const desiredTemperature = document.getElementById('desiredTemperature');
-  desiredTemperature.min = internalTemp;
+  const desiredTemp = document.getElementById('desiredTemp');
+  desiredTemp.min = internalTemp;
 }
 
 /**
@@ -60,10 +61,10 @@ function setupForm() {
   prototypeForm?.addEventListener("submit", function (event) {
     event.preventDefault();
     // Comparar la temperatura ingresada con la internalTemp
-    const desiredTemperature = +document.getElementById('desiredTemperature').value;
+    const desiredTemp = +document.getElementById('desiredTemp').value;
     const samplingFrequency = +document.getElementById('samplingFrequency').value;
   
-    initializeDevice(desiredTemperature, samplingFrequency).then(() => {
+    initializeDevice(desiredTemp, samplingFrequency).then(() => {
       window.location.href = "on";
     }).catch((error) => {
       if (error.status === 400 && error.error) {
@@ -103,23 +104,41 @@ function setDataFetchInterval() {
  * Get the status from the API
  */
 async function getStatusData() {
-  const statusData = await getStatus();
-  const { internalTemp, externalTemp, desiredTemp, status } = statusData;
-  const internalTempElement = document.getElementById('internalTemp');
-  const externalTempElement = document.getElementById('externalTemp');
-  const desiredTempElement = document.getElementById('desiredTemp');
-  const statusElement = document.getElementById('status');
+  try {
+    const statusData = await getStatus();
 
-  internalTempElement.innerHTML = `${internalTemp ?? '--'} °C`;
-  externalTempElement.innerHTML = `${externalTemp ?? '--'} °C`;
-  desiredTempElement.innerHTML = `${desiredTemp ?? '--'} °C`;
-  statusElement.innerHTML = status;
-  if (previousStatus !== 'OFF' && status === 'OFF') {
-    clearDataFetchInterval();
-    location.href = '/';
+    if (statusData) {
+      const { internalTemp, externalTemp, desiredTemp, status } = statusData;
+      const internalTempElement = document.getElementById('internalTemp');
+      const externalTempElement = document.getElementById('externalTemp');
+      const desiredTempElement = document.getElementById('desiredTemp');
+      const statusElement = document.getElementById('status');
+
+      if(internalTempElement) {
+        internalTempElement.innerHTML = `${internalTemp ?? '--'} °C`;
+      }
+      if(externalTempElement){
+        externalTempElement.innerHTML = `${externalTemp ?? '--'} °C`;
+      }
+      if(desiredTempElement){
+        desiredTempElement.innerHTML = `${desiredTemp ?? '--'} °C`;
+      }
+      if(statusElement){
+        statusElement.innerHTML = status;
+      }
+      if (previousStatus !== 'OFF' && status === 'OFF') {
+        clearDataFetchInterval();
+        location.href = '/';
+      }
+      previousStatus = status;
+    } else {
+      console.error('El estado devuelto por la API es undefined.');
+    }
+  } catch (error) {
+    console.error('Error al obtener el estado:', error);
   }
-  previousStatus = status;
 }
+
 
 // Functions for /report
 
@@ -157,3 +176,4 @@ async function fillTable() {
 function addDataIntoCell(cell, data) {
   cell.innerHTML = `${data || '--'} °C`;
 }
+});
